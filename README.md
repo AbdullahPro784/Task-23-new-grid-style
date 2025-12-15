@@ -1,56 +1,34 @@
-# 🚀 Next.js Enterprise Data Grid Suite
+# 🚀 Task 20: Advanced Grid Customization & Logic
 
-A high-performance, modular Data Grid system built with **Next.js**, **TanStack Table**, and **Tailwind CSS**.
+This update introduces significant functional and cosmetic enhancements to the Data Grid, focusing on data integrity, UX stability, and hierarchical data visualization.
 
-This project demonstrates a modernized, "headless" approach to enterprise data tables. Unlike legacy solutions (e.g., standard AG Grid implementations), this architecture offers 100% UI customizability, superior rendering performance, and a unified API for different business verticals.
+## ✅ Completed Requirements (13/13)
 
-![Asset Management Preview](preview.png)
+### 🎨 UI Stability & Search
+* **Consistent Layout:** Fixed row heights to prevent layout shift during pagination, even with fewer records (**Point 1**).
+* **Locked Dimensions:** Frozen header and cell widths to ensure visual consistency (**Point 2**).
+* **Global Search:** Fixed top-left search functionality to filter across all allowable fields (**Point 9**).
+* **Persistent Pagination:** Editing a record on Page 2/3 now keeps the user on the same page instead of resetting to Page 1 (**Point 12**).
 
-## 🌟 Project Overview
+### 🛡️ Data Integrity & Validation
+* **Save Confirmation:** Double-clicking to edit now triggers a "Save/Discard" prompt to prevent accidental changes (**Point 3**).
+* **Read-Only Fields:** `Asset ID` is now locked and cannot be modified via double-click (**Point 4**).
+* **Smart Dropdowns:** The `Category` column now renders a Select Dropdown on edit instead of a text input (**Point 7**).
 
-This suite combines multiple grid implementations to solve distinct business requirements:
+### ⚡ Advanced Actions
+* **Batch Deletion:** Added checkbox selection for single or bulk row deletion (**Point 5**).
+* **Context Menu:** Right-click (or 3-dot icon) on the `Vehicle` column opens a custom menu with options ("Assign Driver", "Check History") (**Point 6**).
+* **Tree Data:** Implemented hierarchical grid logic. Sales records now expand to show nested Sales Items via an arrow toggle (**Point 13**).
 
-1.  **Asset Management:** A clean, light-mode interface for tracking physical inventory with status indicators and action modules.
-2.  **Performance Analytics:** A high-density, dark-mode interface for financial and participant data with grouped headers and complex metrics.
-
-## ⚡ Key Features
-
-Built to satisfy specific enterprise constraints:
-
-* **🔍 Instant Filtering:** Column-specific filters located directly within headers (or below) for rapid data narrowing.
-* **👁️ Dynamic Column Visibility:** Users can toggle specific columns on/off via a settings dropdown, preserving layout stability.
-* **✏️ Inline Editing:** Double-click interaction model allows users to edit data in place.
-    * *Smart inputs:* Text fields for strings, dropdowns for status, and numeric validation.
-* **🎨 Multi-Theme Architecture:** seamless support for both Light Mode (Asset View) and Dark Mode (Performance View).
-* **Performance:** Optimized for large datasets using virtualization techniques.
+### 🚦 Visual Indicators & Logic
+* **Conditional Date Formatting:** (**Point 10**)
+    * 🟧 **Orange:** < 5 days remaining.
+    * 🟥 **Red:** < 2 days remaining.
+    * ⬛ **Black:** Date passed.
+* **Dynamic Iconography:** The status column now renders specific icons (Spanner 🔧, Hat 🧢, Settings ⚙️) based on the numeric data value (**Point 11**).
+* **Toolbar Icons:** Explanation provided for top-right view switchers (List, Map, Analytics placeholders) (**Point 8**).
 
 ## 🛠️ Tech Stack
-
-* **Framework:** Next.js 14 (App Router)
-* **Core Logic:** @tanstack/react-table (v8)
-* **Styling:** Tailwind CSS + clsx
-* **Language:** TypeScript
-
-## 📦 Installation
-
-1.  Clone the repository:
-    ```bash
-    git clone [https://github.com/YOUR-USERNAME/enterprise-grid-suite.git](https://github.com/YOUR-USERNAME/enterprise-grid-suite.git)
-    ```
-
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-
-3.  Run the development server:
-    ```bash
-    npm run dev
-    ```
-
-## 💡 Why This Solution?
-
-Client Requirement: *"We are not making grid exactly like ag-grid... we like to have most of the features... can u give a improved better version of this?"*
-
-**The Improvement:**
-Standard grids are often "bloated" with unused JavaScript. This solution uses a **Headless UI** pattern. We stripped away the heavy default styles of AG Grid and rebuilt the core features (Filter, Edit, Hide) using TanStack Table. This results in a smaller bundle size, faster "First Contentful Paint," and a UI that perfectly matches the "Quartz" and "Clean" design systems requested.
+* **Framework:** Next.js
+* **Grid Logic:** TanStack Table (Headless UI)
+* **Styling:** Tailwind CSS

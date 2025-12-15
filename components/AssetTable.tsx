@@ -14,7 +14,10 @@ import {
     ColumnFiltersState,
     VisibilityState,
     getFilteredRowModel,
+    ExpandedState,
+    getExpandedRowModel,
 } from "@tanstack/react-table";
+import { StatusEditableCell } from "./StatusEditableCell";
 import {
     DndContext,
     closestCenter,
@@ -46,8 +49,18 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    MoreHorizontal,
+    Trash2,
 } from "lucide-react";
-import { Asset, AssetStatus } from "./data";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Asset, AssetStatus, DATA } from "./data";
 import { cn } from "@/lib/utils";
 import { DraggableTableHeader } from "./DraggableTableHeader";
 import { EditableCell } from "./EditableCell";
@@ -57,6 +70,13 @@ import AddItemModal from "./AddItemModal";
 // --- Main Component ---
 export default function AssetTable({ data: initialData }: { data: Asset[] }) {
     const [isMounted, setIsMounted] = useState(false);
+
+    // Extract unique categories from DATA for the dropdown
+    const uniqueCategories = React.useMemo(() => {
+        const categories = new Set(DATA.map(item => item.category));
+        return Array.from(categories).sort();
+    }, []);
+
     const [data, setData] = useState(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
@@ -67,8 +87,10 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [globalFilter, setGlobalFilter] = useState(""); // Global filter state
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([
+        "select",
         "id",
         "serial",
         "category",
@@ -84,7 +106,11 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
         const savedOrder = localStorage.getItem("assetTableColumnOrder");
         if (savedOrder) {
             try {
-                setColumnOrder(JSON.parse(savedOrder));
+                const parsedOrder = JSON.parse(savedOrder);
+                if (!parsedOrder.includes("select")) {
+                    parsedOrder.unshift("select");
+                }
+                setColumnOrder(parsedOrder);
             } catch (e) {
                 console.error("Failed to parse column order", e);
             }
@@ -96,96 +122,242 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
         localStorage.setItem("assetTableColumnOrder", JSON.stringify(columnOrder));
     }, [columnOrder]);
 
-    const columns: ColumnDef<Asset>[] = [
+    const columns = React.useMemo<ColumnDef<Asset>[]>(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <div className="px-4 py-3 h-full flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        aria-label="Select row"
+                    />
+                    {row.getCanExpand() && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                row.toggleExpanded();
+                            }}
+                            className="p-1 hover:bg-gray-200 rounded cursor-pointer"
+                        >
+                            {row.getIsExpanded() ? (
+                                <ChevronDown size={16} className="text-gray-500" />
+                            ) : (
+                                <ChevronRight size={16} className="text-gray-500" />
+                            )}
+                        </button>
+                    )}
+                </div>
+            ),
+            enableSorting: false,
+            enableHiding: false,
+            size: 50,
+        },
         {
             accessorKey: "id",
             header: "Asset ID",
-            cell: EditableCell,
+            cell: (info) => <div className="px-4 py-3 h-full">{info.getValue() as string}</div>,
+            size: 100,
         },
         {
             accessorKey: "serial",
             header: "Serial",
             cell: EditableCell,
+            size: 150,
         },
         {
             accessorKey: "category",
             header: "Category",
-            cell: EditableCell,
+            cell: (props) => <EditableCell {...props} options={uniqueCategories} />,
+            size: 140,
         },
         {
             accessorKey: "brand",
             header: "Brand",
             cell: EditableCell,
+            size: 140,
         },
         {
             accessorKey: "type",
             header: "Type",
             cell: EditableCell,
+            size: 140,
         },
         {
             accessorKey: "vehicle",
             header: "Vehicle",
-            cell: EditableCell,
-        },
-        {
-            accessorKey: "status",
-            header: "Status",
-            cell: (info) => {
-                const status = info.getValue() as AssetStatus;
-
+            size: 140,
+            cell: ({ row, getValue, table }) => {
+                const value = getValue() as string;
                 return (
-                    <div className="flex items-center justify-end gap-2">
-                        {status.state === "maintenance" && <Wrench className="text-orange-500" size={20} fill="currentColor" fillOpacity={0.2} />}
-                        {status.state === "operational" && <CheckCircle className="text-orange-500" size={20} />}
-                        {status.state === "repair" && <Settings className="text-orange-500" size={20} />}
-                        {status.state === "inspection" && <HardHat className="text-orange-500" size={20} />}
-
-                        {status.level && (
-                            <span className="font-bold text-gray-700">{status.level}</span>
-                        )}
+                    <div
+                        className="flex items-center justify-between px-4 py-3 h-full group"
+                        onContextMenu={(e) => {
+                            e.preventDefault();
+                            alert("Please click the three dots menu to see options.");
+                        }}
+                    >
+                        <span className="truncate">{value}</span>
+                        <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                    alert("Option selected: Assign Driver");
+                                }}>
+                                    Assign Driver
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => alert("Option selected: Check History")}>
+                                    Check History
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 );
             },
         },
-    ];
+        {
+            accessorKey: "endDate",
+            header: "End Date",
+            cell: (props) => <EditableCell {...props} type="date" />,
+            size: 140,
+        },
+        {
+            accessorKey: "status",
+            header: "Status",
+            size: 180,
+            cell: StatusEditableCell,
+        },
+    ], [uniqueCategories]);
 
     const table = useReactTable({
         data,
         columns,
+        getRowId: (row) => row.id, // Ensure rows are identified by their ID
         state: {
             sorting,
             columnOrder,
             rowSelection,
             columnFilters,
             columnVisibility,
+            globalFilter, // Pass global filter state
         },
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
+        onGlobalFilterChange: setGlobalFilter, // Handle global filter changes
         onColumnVisibilityChange: setColumnVisibility,
+        onColumnOrderChange: setColumnOrder,
         onColumnOrderChange: setColumnOrder,
         onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
+        getSubRows: (row) => row.subRows,
         getPaginationRowModel: getPaginationRowModel(),
+        autoResetPageIndex: false, // Prevent resetting to page 1 on update
         enableRowSelection: true,
-        enableMultiRowSelection: false,
+        enableMultiRowSelection: true,
         meta: {
-            updateData: (rowIndex: number, columnId: string, value: any) => {
+            updateData: async (itemId: string, columnId: string, value: any) => {
+                const previousData = [...data];
+
+                // Optimistic Update
                 setData((old) =>
-                    old.map((row, index) => {
-                        if (index === rowIndex) {
+                    old.map((item) => {
+                        if (item.id === itemId) {
                             return {
-                                ...old[rowIndex],
+                                ...item,
                                 [columnId]: value,
                             };
                         }
-                        return row;
+                        return item;
                     })
                 );
+
+                try {
+                    let body;
+                    if (columnId === "status") {
+                        body = JSON.stringify({
+                            statusState: value.state,
+                            statusLevel: value.level
+                        });
+                    } else {
+                        body = JSON.stringify({ [columnId]: value });
+                    }
+
+                    const response = await fetch(`/api/items/${itemId}`, {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body,
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("API Error:", errorText);
+                        throw new Error(`Failed to update: ${response.statusText}`);
+                    }
+                } catch (error) {
+                    console.error("Update failed", error);
+                    // Revert on failure
+                    setData(previousData);
+                    alert(`Failed to save changes: ${(error as Error).message}. Reverting.`);
+                }
             },
         },
     });
+
+    const handleDeleteSelected = async () => {
+        console.log("Delete button clicked");
+        try {
+            const selectedRowIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id);
+            console.log("Selected IDs:", selectedRowIds);
+
+            if (selectedRowIds.length === 0) {
+                alert("No items selected!");
+                return;
+            }
+
+            if (window.confirm(`Are you sure you want to delete ${selectedRowIds.length} item(s)?`)) {
+                const response = await fetch("/api/items/batch", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ids: selectedRowIds }),
+                });
+
+                if (response.ok) {
+                    setData(prev => prev.filter(item => !selectedRowIds.includes(item.id)));
+                    setRowSelection({});
+                } else {
+                    const err = await response.text();
+                    alert(`Failed to delete items: ${err}`);
+                }
+            }
+        } catch (error) {
+            console.error("Delete failed", error);
+            alert(`Error deleting items: ${(error as Error).message}`);
+        }
+    };
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -213,9 +385,28 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
         <div className="w-full max-w-6xl mx-auto p-4 bg-white rounded-lg shadow-sm border border-gray-200 font-sans">
             <div className="mb-4 flex items-center justify-between">
                 {/* Search bar placeholder to match image */}
-                <div className="relative w-64">
-                    <input type="text" placeholder="Search all assets" className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
-                    <span className="absolute left-2.5 top-2.5 text-gray-400">🔍</span>
+                <div className="flex gap-2 items-center">
+                    <div className="relative w-64">
+                        <input
+                            type="text"
+                            placeholder="Search all assets"
+                            value={globalFilter} // Bind value
+                            onChange={(e) => setGlobalFilter(e.target.value)} // Bind onChange
+                            className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <span className="absolute left-2.5 top-2.5 text-gray-400">🔍</span>
+                    </div>
+                    {Object.keys(rowSelection).length > 0 && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDeleteSelected}
+                            className="flex items-center gap-2"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete ({Object.keys(rowSelection).length})
+                        </Button>
+                    )}
                 </div>
                 <div className="flex gap-2 relative">
                     <button
@@ -259,11 +450,7 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
                             </>
                         )}
                     </div>
-                    <div className="flex gap-1">
-                        <button className="p-2 bg-orange-500 text-white rounded-md">☰</button>
-                        <button className="p-2 border border-gray-300 rounded-md text-gray-500">🗺️</button>
-                        <button className="p-2 border border-gray-300 rounded-md text-gray-500">📅</button>
-                    </div>
+
                 </div>
             </div>
 
@@ -294,7 +481,7 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
                 sensors={sensors}
             >
                 <div className="overflow-x-auto border border-gray-200 rounded-md">
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full text-sm text-left table-fixed">
                         <thead>
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <tr key={headerGroup.id}>
@@ -310,25 +497,56 @@ export default function AssetTable({ data: initialData }: { data: Asset[] }) {
                             ))}
                         </thead>
                         <tbody>
-                            {table.getRowModel().rows.map((row) => (
-                                <tr
-                                    key={row.id}
-                                    onClick={() => row.toggleSelected()}
-                                    className={cn(
-                                        "border-b border-gray-100 cursor-pointer transition-colors",
-                                        // Hover effect: light grey/light blue (using slate-50/blue-50 mix)
-                                        "hover:bg-slate-50",
-                                        // Selection effect: "ember" (amber/orange)
-                                        row.getIsSelected() ? "bg-orange-100 hover:bg-orange-200" : ""
-                                    )}
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id} className="px-4 py-3 text-gray-700">
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
+                            {table.getRowModel().rows.map((row) => {
+                                // Calculate days remaining
+                                let rowClass = "hover:bg-slate-50";
+                                let textClass = "text-gray-700";
+
+                                if (row.original.endDate) {
+                                    const end = new Date(row.original.endDate);
+                                    const today = new Date();
+                                    // Set time to midnight for accurate day calculation
+                                    today.setHours(0, 0, 0, 0);
+                                    end.setHours(0, 0, 0, 0);
+
+                                    const diffTime = end.getTime() - today.getTime();
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                    if (diffDays < 0) {
+                                        // Passed: Black
+                                        rowClass = "bg-slate-900 hover:bg-slate-800";
+                                        textClass = "text-white";
+                                    } else if (diffDays <= 2) {
+                                        // <= 2 Days: Red
+                                        rowClass = "bg-red-100 hover:bg-red-200";
+                                        textClass = "text-red-900 font-medium";
+                                    } else if (diffDays <= 5) {
+                                        // <= 5 Days: Orange
+                                        rowClass = "bg-orange-100 hover:bg-orange-200";
+                                        textClass = "text-orange-900 font-medium";
+                                    }
+                                }
+
+                                return (
+                                    <tr
+                                        key={row.id}
+                                        onClick={() => row.toggleSelected()}
+                                        className={cn(
+                                            "border-b border-gray-100 cursor-pointer transition-colors",
+                                            rowClass,
+                                            // Selection override (optional, blending)
+                                            row.getIsSelected() ? "bg-opacity-90 ring-1 ring-inset ring-orange-400" : "",
+                                            "h-16"
+                                        )}
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <td key={cell.id} className={cn("p-0", textClass)}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

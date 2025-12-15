@@ -27,6 +27,7 @@ export const DraggableTableHeader = ({
         opacity: isDragging ? 0.8 : 1,
         zIndex: isDragging ? 1 : 0,
         position: "relative",
+        width: header.getSize(),
     };
 
     return (
@@ -53,16 +54,18 @@ export const DraggableTableHeader = ({
                     onClick={header.column.getToggleSortingHandler()}
                     className={cn(
                         "flex items-center gap-1 cursor-pointer flex-1",
-                        header.column.getCanSort() ? "hover:text-gray-900" : ""
+                        header.column.getCanSort() ? "hover:text-gray-900" : "cursor-default"
                     )}
                 >
                     {flexRender(header.column.columnDef.header, header.getContext())}
-                    {{
-                        asc: <ChevronUp size={14} />,
-                        desc: <ChevronDown size={14} />,
-                    }[header.column.getIsSorted() as string] ?? (
+                    {header.column.getCanSort() && (
+                        {
+                            asc: <ChevronUp size={14} />,
+                            desc: <ChevronDown size={14} />,
+                        }[header.column.getIsSorted() as string] ?? (
                             <ChevronsUpDown size={14} className="text-gray-300" />
-                        )}
+                        )
+                    )}
                 </div>
             </div>
             {/* Filter Input */}

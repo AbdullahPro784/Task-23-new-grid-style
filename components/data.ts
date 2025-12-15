@@ -13,6 +13,15 @@ export type Asset = {
     type: string;
     vehicle: string;
     status: AssetStatus;
+    endDate?: string; // Format YYYY-MM-DD
+    subRows?: Asset[];
+};
+
+// Helper to get date string relative to today
+const getDate = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
 };
 
 export const DATA: Asset[] = [
@@ -24,6 +33,7 @@ export const DATA: Asset[] = [
         type: "CoffeCup",
         vehicle: "-",
         status: { state: "maintenance", level: 2 },
+        endDate: getDate(-5), // Passed: Black
     },
     {
         id: "1306700",
@@ -33,6 +43,7 @@ export const DATA: Asset[] = [
         type: "Tennant - T7 - Floor Scrubber",
         vehicle: "-",
         status: { state: "maintenance", level: 1 },
+        endDate: getDate(1), // < 2 days: Red
     },
     {
         id: "1306666",
@@ -42,6 +53,7 @@ export const DATA: Asset[] = [
         type: "CP030",
         vehicle: "-",
         status: { state: "operational" },
+        endDate: getDate(4), // < 5 days: Orange
     },
     {
         id: "1302986",
@@ -51,6 +63,7 @@ export const DATA: Asset[] = [
         type: "Heizung",
         vehicle: "-",
         status: { state: "operational" },
+        endDate: getDate(10), // Safe: White
     },
     {
         id: "1302496",
@@ -60,6 +73,7 @@ export const DATA: Asset[] = [
         type: "Cup",
         vehicle: "-",
         status: { state: "repair", level: 1 },
+        endDate: getDate(1), // Red
     },
     {
         id: "1300903",
@@ -69,6 +83,7 @@ export const DATA: Asset[] = [
         type: "Maxstar 200",
         vehicle: "-",
         status: { state: "maintenance", level: 4 },
+        endDate: getDate(-1), // Black
     },
     {
         id: "1296312",
@@ -78,6 +93,7 @@ export const DATA: Asset[] = [
         type: "Block",
         vehicle: "-",
         status: { state: "maintenance", level: 2 },
+        endDate: getDate(3), // Orange
     },
     {
         id: "1296260",
