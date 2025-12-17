@@ -54,8 +54,8 @@ The core implementation featuring the new **Summary Cards**, **Search Filter Bar
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/your-username/your-repo-name.git
-    cd your-repo-name
+    git clone https://github.com/AbdullahPro784/Task-23-new-grid-style
+    cd AbdullahPro784
     ```
 
 2.  **Install dependencies**:
